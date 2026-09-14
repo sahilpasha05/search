@@ -1,0 +1,9 @@
+node_modules/
+dist/
+filtercore.db
+filtercore.db-shm
+filtercore.db-wal
+.DS_Store
+server/gcp-credentials.json
+*.env
+.env*

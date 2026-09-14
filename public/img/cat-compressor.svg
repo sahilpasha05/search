@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="can" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#25415f"/><stop offset=".45" stop-color="#3f6a94"/><stop offset="1" stop-color="#16293f"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c3cfdd"/><stop offset=".5" stop-color="#eef2f7"/><stop offset="1" stop-color="#a9b8ca"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="12" fill="#f1f5f9"/>
+  <ellipse cx="200" cy="262" rx="100" ry="12" fill="#0f172a" opacity=".07"/>
+  <rect x="138" y="66" width="124" height="24" rx="8" fill="url(#top)"/>
+  <rect x="132" y="88" width="136" height="164" rx="14" fill="url(#can)"/>
+  <rect x="132" y="104" width="136" height="6" fill="#0f2136" opacity=".55"/>
+  <rect x="146" y="128" width="108" height="52" rx="6" fill="#eef2f7"/>
+  <rect x="154" y="138" width="70" height="8" rx="3" fill="#33567f"/>
+  <rect x="154" y="152" width="92" height="5" rx="2.5" fill="#9db1c7"/>
+  <rect x="154" y="162" width="80" height="5" rx="2.5" fill="#9db1c7"/>
+  <circle cx="200" cy="66" r="12" fill="#e07020"/>
+  <circle cx="200" cy="66" r="5" fill="#8a4210"/>
+</svg>

@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* FilterCore design system — light mode only */
+  --color-primary: #0d5c94;        /* professional blue */
+  --color-primary-dark: #0a4a77;
+  --color-primary-light: #eaf3fb;
+  --color-accent: #ef7f1a;         /* industrial orange for key CTAs */
+  --color-accent-dark: #cf6a0d;
+  --color-ink: #101c2c;            /* navy/charcoal typography */
+  --color-ink-soft: #46586e;
+  --color-line: #dfe6ee;
+  --color-surface: #f4f7fb;
+
+  --shadow-card: 0 1px 2px rgb(16 28 44 / 0.05), 0 4px 14px rgb(16 28 44 / 0.06);
+  --shadow-pop: 0 8px 30px rgb(16 28 44 / 0.14);
+
+  --animate-fade-in: fade-in 0.18s ease-out;
+  --animate-rise: rise 0.24s ease-out;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utility: hide scrollbars on horizontal chip rows */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Print / PDF spec sheet */
+@media print {
+  header, nav, footer, .no-print { display: none !important; }
+  body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+  a { color: inherit !important; text-decoration: none !important; }
+  .shadow-card, .shadow-pop { box-shadow: none !important; }
+  img { max-height: 180px; object-fit: contain; }
+  section { break-inside: avoid; }
+  @page { margin: 15mm 15mm 20mm; }
+}
