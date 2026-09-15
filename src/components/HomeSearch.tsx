@@ -159,7 +159,16 @@ function CrossRefInput() {
     getJSON<{ suggestions: Suggestion[]; products: { id: number; name: string; code: string }[] }>(
       `/api/suggest?q=${encodeURIComponent(debounced)}`
     )
-      .then((r) => { setSuggestions(r.suggestions); setProducts(r.products ?? []); setOpen(true) })
+      .then((r) => {
+        const hasSuggestions = (r.suggestions?.length ?? 0) > 0
+        const hasProducts = (r.products?.length ?? 0) > 0
+        if (hasSuggestions || hasProducts) {
+          setSuggestions(r.suggestions)
+          setProducts(r.products ?? [])
+          setOpen(true)
+        }
+        // if empty, keep previous results visible so dropdown doesn't flicker away
+      })
       .catch(() => {})
   }, [debounced])
 
