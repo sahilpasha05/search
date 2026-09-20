@@ -115,6 +115,7 @@ export function ProductDetails() {
             <p className="font-semibold text-ink mb-2">Internal Reference</p>
             <div className="grid grid-cols-2 gap-y-1.5 text-xs text-ink-soft">
               <span>SC Code</span><span className="font-mono font-medium text-ink">{p.code}</span>
+              {(p as any).model_no && <><span>Model No.</span><span className="font-mono font-medium text-ink">{(p as any).model_no}</span></>}
               {oem && <><span>OEM Number</span><span className="font-mono font-medium text-ink">{oem.number}</span></>}
               <span>Total Cross-Refs</span><span className="font-medium text-ink">{p.part_numbers.length}</span>
               <span>Availability</span><span className="font-medium text-ink">{p.availability}</span>

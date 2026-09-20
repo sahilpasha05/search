@@ -266,6 +266,7 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
     manufacturer: product?.manufacturer ?? '',
     category: product?.category ?? '',
     description: product?.description ?? '',
+    model_no: (product as any)?.model_no ?? '',
     image: product?.image ?? IMAGE_OPTIONS[9],
     images: (product as any)?.images ?? [] as string[],
     filter_type: product?.filter_type ?? '',
@@ -352,6 +353,7 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
       length_mm: num(f.length_mm),
       micron: num(f.micron),
       rate: num(f.rate),
+      model_no: (f as any).model_no ?? '',
       images: ((f as any).images ?? []).filter(Boolean),
       part_numbers: product ? undefined : parts,
     }
@@ -384,6 +386,7 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div><label className={labelCls}>Product Name *</label><input className={inputCls} value={f.name} onChange={set('name')} /></div>
           <div><label className={labelCls}>Product Code *</label><input className={inputCls} value={f.code} onChange={set('code')} /></div>
+          <div><label className={labelCls}>Model No.</label><input className={inputCls} value={(f as any).model_no} onChange={set('model_no')} placeholder="e.g. AF-110, SC-23" /></div>
           <div>
             <label className={labelCls}>Manufacturer</label>
             <input className={inputCls} list="mk-list" value={f.manufacturer} onChange={set('manufacturer')} placeholder="Type or pick…" />
