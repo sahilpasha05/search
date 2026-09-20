@@ -289,8 +289,18 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
     product?.part_numbers?.map((n) => ({ id: n.id, number: n.number, type: n.type, maker: n.maker })) ?? [],
   )
   const [newPart, setNewPart] = useState({ number: '', type: 'Cross Reference', maker: '' })
+  const [compatModels, setCompatModels] = useState<{ id?: number; model: string; manufacturer: string }[]>([])
+  const [newModel, setNewModel] = useState({ model: '', manufacturer: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (product?.id) {
+      getJSON<{ model: string; manufacturer: string; id: number }[]>(
+        `/api/products/${product.id}/compatible-models`
+      ).then(setCompatModels).catch(() => {})
+    }
+  }, [product?.id])
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((v) => ({ ...v, [k]: e.target.value }))
@@ -334,6 +344,23 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
       setParts((p) => [...p, { ...newPart }])
     }
     setNewPart({ number: '', type: 'Cross Reference', maker: '' })
+  }
+
+  const addCompatModel = async () => {
+    if (!newModel.model.trim()) return
+    if (product) {
+      const r = await sendJSON<{ id: number }>(`/api/products/${product.id}/compatible-models`, 'POST', newModel)
+      setCompatModels((m) => [...m, { ...newModel, id: r.id }])
+    } else {
+      setCompatModels((m) => [...m, { ...newModel }])
+    }
+    setNewModel({ model: '', manufacturer: '' })
+  }
+
+  const removeCompatModel = async (i: number) => {
+    const cm = compatModels[i]
+    if (cm.id) await sendJSON(`/api/compatible-models/${cm.id}`, 'DELETE', {})
+    setCompatModels((m) => m.filter((_, idx) => idx !== i))
   }
 
   const removePart = async (i: number) => {
@@ -502,6 +529,27 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
             </select>
             <input className={inputCls} placeholder="Maker (e.g. Donaldson)" value={newPart.maker} onChange={(e) => setNewPart((p) => ({ ...p, maker: e.target.value }))} />
             <button onClick={addPart} className={btnGhost + ' px-4'}><ListPlus className="h-4 w-4" /> Add</button>
+          </div>
+        </div>
+
+        {/* Compatible machine models */}
+        <div className="mt-6 rounded-xl border border-line p-4">
+          <h3 className="flex items-center gap-2 text-sm font-bold"><Package className="h-4 w-4 text-primary" /> Compatible Machine Models (Application Search)</h3>
+          <p className="mt-1 text-xs text-ink-soft">Models added here will appear in the Application search dropdown.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {compatModels.map((cm, i) => (
+              <span key={i} className="inline-flex items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5 text-xs">
+                <span className="font-semibold">{cm.model}</span>
+                {cm.manufacturer && <span className="text-ink-soft">{cm.manufacturer}</span>}
+                <button onClick={() => removeCompatModel(i)} className="text-ink-soft hover:text-red-600"><X className="h-3.5 w-3.5" /></button>
+              </span>
+            ))}
+            {compatModels.length === 0 && <p className="text-xs text-ink-soft">No machine models linked yet.</p>}
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <input className={inputCls} placeholder="Model name (e.g. GA37, e11 7.5)" value={newModel.model} onChange={(e) => setNewModel((m) => ({ ...m, model: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addCompatModel()} />
+            <input className={inputCls} placeholder="Manufacturer (e.g. Atlas Copco)" value={newModel.manufacturer} onChange={(e) => setNewModel((m) => ({ ...m, manufacturer: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && addCompatModel()} />
+            <button onClick={addCompatModel} className={btnGhost + ' px-4'}><ListPlus className="h-4 w-4" /> Add</button>
           </div>
         </div>
 

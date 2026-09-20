@@ -622,6 +622,29 @@ export function createApi(): Express {
     res.json({ ok: true })
   })
 
+  // ── compatible models (application search) ─────────────────────────────────
+  app.get('/api/products/:id/compatible-models', async (req, res) => {
+    const { data, error } = await db.from('compatible_models')
+      .select('id,model,manufacturer').eq('product_id', req.params.id).order('model')
+    if (error) return res.status(500).json({ error: error.message })
+    res.json(data ?? [])
+  })
+
+  app.post('/api/products/:id/compatible-models', async (req, res) => {
+    const { model, manufacturer } = req.body
+    if (!model?.trim()) return res.status(400).json({ error: 'Model name required' })
+    const { data, error } = await db.from('compatible_models')
+      .insert({ product_id: Number(req.params.id), model: model.trim(), manufacturer: manufacturer?.trim() ?? '' })
+      .select('id').single()
+    if (error) return res.status(400).json({ error: error.message })
+    res.json({ id: data.id })
+  })
+
+  app.delete('/api/compatible-models/:id', async (req, res) => {
+    await db.from('compatible_models').delete().eq('id', req.params.id)
+    res.json({ ok: true })
+  })
+
   // ── categories & manufacturers ─────────────────────────────────────────────
   app.post('/api/categories', async (req, res) => {
     const { name, description } = req.body
