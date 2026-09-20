@@ -267,6 +267,7 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
     category: product?.category ?? '',
     description: product?.description ?? '',
     image: product?.image ?? IMAGE_OPTIONS[9],
+    images: (product as any)?.images ?? [] as string[],
     filter_type: product?.filter_type ?? '',
     material: product?.material ?? '',
     availability: product?.availability ?? 'In Stock',
@@ -303,6 +304,26 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
     reader.readAsDataURL(file)
   }
 
+  const uploadExtraImage = (slot: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setF((v) => {
+      const imgs = [...((v as any).images ?? [])]
+      imgs[slot] = reader.result as string
+      return { ...v, images: imgs }
+    })
+    reader.readAsDataURL(file)
+  }
+
+  const removeExtraImage = (slot: number) => {
+    setF((v) => {
+      const imgs = [...((v as any).images ?? [])]
+      imgs.splice(slot, 1)
+      return { ...v, images: imgs }
+    })
+  }
+
   const addPart = async () => {
     if (!newPart.number.trim()) return
     if (product) {
@@ -331,6 +352,7 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
       length_mm: num(f.length_mm),
       micron: num(f.micron),
       rate: num(f.rate),
+      images: ((f as any).images ?? []).filter(Boolean),
       part_numbers: product ? undefined : parts,
     }
     try {
@@ -409,17 +431,49 @@ function ProductEditor({ product, onClose }: { product: Product | null; onClose:
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>Product Image</label>
-            <div className="flex flex-wrap items-center gap-3">
-              <img src={f.image} alt="" className="h-14 w-18 rounded-lg border border-line object-cover" />
-              <select className={selectCls + ' max-w-56'} value={IMAGE_OPTIONS.includes(f.image) ? f.image : ''} onChange={set('image')}>
-                <option value="" disabled>Pick a stock image…</option>
-                {IMAGE_OPTIONS.map((i) => <option key={i} value={i}>{i.replace('/img/cat-', '').replace('.svg', '')}</option>)}
-              </select>
-              <label className={btnGhost + ' cursor-pointer px-4 py-2 text-xs'}>
-                <Upload className="h-3.5 w-3.5" /> Upload
-                <input type="file" accept="image/*" className="hidden" onChange={uploadImage} />
-              </label>
+            <label className={labelCls}>Product Images (max 4 — different angles)</label>
+            <div className="grid grid-cols-4 gap-3 mt-2">
+              {/* Slot 0 — main image */}
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="relative h-24 w-full rounded-lg border-2 border-dashed border-line bg-surface flex items-center justify-center overflow-hidden">
+                  <img src={f.image} alt="" className="h-full w-full object-cover rounded-lg" />
+                  <span className="absolute bottom-1 left-1 rounded bg-black/50 px-1 text-[9px] text-white">Main</span>
+                </div>
+                <div className="flex gap-1 w-full">
+                  <select className="flex-1 text-[10px] rounded border border-line px-1 py-1 bg-white" value={IMAGE_OPTIONS.includes(f.image) ? f.image : ''} onChange={set('image')}>
+                    <option value="" disabled>Stock…</option>
+                    {IMAGE_OPTIONS.map((i) => <option key={i} value={i}>{i.replace('/img/cat-', '').replace('.svg', '')}</option>)}
+                  </select>
+                  <label className="cursor-pointer rounded border border-line bg-white px-1.5 py-1 text-[10px] text-ink-soft hover:bg-surface flex items-center gap-0.5">
+                    <Upload className="h-3 w-3" />
+                    <input type="file" accept="image/*" className="hidden" onChange={uploadImage} />
+                  </label>
+                </div>
+              </div>
+              {/* Slots 1–3 — extra angles */}
+              {[0, 1, 2].map((slot) => {
+                const imgs = (f as any).images ?? []
+                const src = imgs[slot]
+                return (
+                  <div key={slot} className="flex flex-col items-center gap-1.5">
+                    <div className="relative h-24 w-full rounded-lg border-2 border-dashed border-line bg-surface flex items-center justify-center overflow-hidden">
+                      {src
+                        ? <>
+                            <img src={src} alt="" className="h-full w-full object-cover rounded-lg" />
+                            <button onClick={() => removeExtraImage(slot)} className="absolute top-1 right-1 rounded-full bg-black/50 p-0.5 text-white hover:bg-red-500">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </>
+                        : <span className="text-[10px] text-ink-soft">Angle {slot + 2}</span>
+                      }
+                    </div>
+                    <label className="cursor-pointer w-full rounded border border-line bg-white px-2 py-1 text-[10px] text-ink-soft hover:bg-surface flex items-center justify-center gap-1">
+                      <Upload className="h-3 w-3" /> Upload
+                      <input type="file" accept="image/*" className="hidden" onChange={uploadExtraImage(slot)} />
+                    </label>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

@@ -66,8 +66,8 @@ export function ProductDetails() {
       {/* Top: gallery + summary */}
       <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-2">
         <div>
-          <div className="overflow-hidden rounded-xl border border-line bg-surface">
-            <img src={images[imgIdx]} alt={p.name} className="aspect-[4/3] w-full object-cover" />
+          <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl border border-line bg-white p-4">
+            <img src={images[imgIdx]} alt={p.name} className="max-h-full max-w-full object-contain" />
           </div>
           {images.length > 1 && (
             <div className="mt-3 flex gap-3">
@@ -75,9 +75,9 @@ export function ProductDetails() {
                 <button
                   key={i}
                   onClick={() => setImgIdx(i)}
-                  className={`overflow-hidden rounded-lg border-2 transition-colors ${i === imgIdx ? 'border-primary' : 'border-line hover:border-primary/40'}`}
+                  className={`flex h-16 w-20 items-center justify-center overflow-hidden rounded-lg border-2 bg-white p-1 transition-colors ${i === imgIdx ? 'border-primary' : 'border-line hover:border-primary/40'}`}
                 >
-                  <img src={img} alt="" className="h-16 w-20 object-cover" />
+                  <img src={img} alt="" className="max-h-full max-w-full object-contain" />
                 </button>
               ))}
             </div>

@@ -17,8 +17,8 @@ export function ProductCard({ product: p }: { product: Product }) {
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border border-line bg-white transition-all duration-150 hover:border-primary/40 hover:shadow-card">
-      <Link to={`/products/${p.id}`} className="relative block bg-surface">
-        <img src={p.image} alt={p.name} className="aspect-[4/3] w-full object-cover" loading="lazy" />
+      <Link to={`/products/${p.id}`} className="relative flex aspect-[4/3] w-full items-center justify-center bg-white p-3">
+        <img src={p.image} alt={p.name} className="max-h-full max-w-full object-contain" loading="lazy" />
         <span className="absolute left-3 top-3">
           <AvailabilityBadge value={p.availability} />
         </span>
