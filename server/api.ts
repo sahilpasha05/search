@@ -3,7 +3,7 @@ import multer from 'multer'
 import * as XLSX from 'xlsx'
 import { db, normalize } from './db.js'
 import { editDistance, fuzzyMax } from './fuzzy.js'
-import { authRouter, requireAuth, requireAdmin } from './auth.js'
+import { authRouter, requireAdmin } from './auth.js'
 import { startFileWatchers, syncFilters, syncGaskets, syncState, FILTER_XLSX, GASKET_XLSX } from './sync.js'
 
 // ---------------------------------------------------------------------------
@@ -14,6 +14,42 @@ import { startFileWatchers, syncFilters, syncGaskets, syncState, FILTER_XLSX, GA
 function stripInternal<T extends { rate?: unknown }>(products: T[]): T[] {
   for (const p of products) delete (p as any).rate
   return products
+}
+
+const CARD_COLS = 'id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name)'
+
+/** DB stores 'in_stock' (sheet "*") or 'available'; show a clean label. */
+function availLabel(v: unknown): string {
+  const s = String(v ?? '').toLowerCase().replace(/[^a-z]/g, '')
+  if (s === 'instock') return 'In Stock'
+  if (s === 'outofstock' || s === 'unavailable') return 'Out of Stock'
+  return 'Available'
+}
+
+/** Search-result card: SC code, category, description, rate, stock — no cross-ref part numbers. */
+function toCard(p: any) {
+  const { categories, part_numbers: _pn, ...rest } = p
+  return {
+    ...rest,
+    category: categories?.name ?? p.category ?? null,
+    availability: availLabel(p.availability),
+    part_numbers: [],
+    part_count: 0,
+  }
+}
+
+/** Fill category/description/availability for products that came from RPCs lacking them. */
+async function toCards(list: any[]): Promise<any[]> {
+  const missing = list.filter((p) => p.categories === undefined && p.category === undefined).map((p) => p.id)
+  const extra = new Map<number, any>()
+  if (missing.length) {
+    const { data } = await db.from('products').select('id,description,categories(name)').in('id', missing)
+    for (const r of (data ?? []) as any[]) extra.set(r.id, r)
+  }
+  return list.map((p) => {
+    const e = extra.get(p.id)
+    return toCard(e ? { ...p, description: p.description ?? e.description, categories: e.categories } : p)
+  })
 }
 
 /** Ensure manufacturer exists; return its id. Cached within a request. */
@@ -93,7 +129,14 @@ export function createApi(): Express {
 
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 
-  app.use('/api', requireAuth)
+  // Public catalog: reads and customer quote submissions need no login.
+  // Everything else (writes, quote list) requires an admin session.
+  app.use('/api', (req, res, next) => {
+    const isPublicQuoteSubmit = req.method === 'POST' && req.path === '/quotes'
+    if (isPublicQuoteSubmit) return next()
+    if (req.method === 'GET' && req.path !== '/quotes') return next()
+    return requireAdmin(req, res, next)
+  })
 
   // ── meta ────────────────────────────────────────────────────────────────────
   app.get('/api/meta', async (_req, res) => {
@@ -216,23 +259,6 @@ export function createApi(): Express {
       }
     }
 
-    // Include siblings from matched products
-    const ids = [...new Set(rows.map((r) => r.product_id))]
-    if (ids.length > 0 && rows.length < 8) {
-      const { data: siblings } = await db.from('part_numbers')
-        .select('number,type,maker,product_id,products(name)')
-        .in('product_id', ids)
-        .order('type').limit(12)
-      const seen = new Set(rows.map((r) => r.number))
-      for (const s of siblings ?? []) {
-        if (!seen.has(s.number)) {
-          rows.push({ number: s.number, type: s.type, maker: s.maker, product_id: s.product_id, product_name: (s as any).products?.name ?? '' })
-          seen.add(s.number)
-        }
-      }
-      rows = rows.slice(0, 8)
-    }
-
     // Fuzzy fallback via RPC
     if (rows.length === 0) {
       const { data: fuzzy } = await db.rpc('fuzzy_part_search', { q: norm, max_results: 6 })
@@ -280,13 +306,13 @@ export function createApi(): Express {
         db.rpc('search_products', rpcArgs),
         appMfrIds.length > 0
           ? db.from('products')
-              .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,part_numbers(id,number,type,maker)')
+              .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name),part_numbers(id,number,type,maker)')
               .in('manufacturer_id', appMfrIds)
               .order('name')
               .limit(20)
           : Promise.resolve({ data: [] }),
         q ? db.from('products')
-            .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,part_numbers(id,number,type,maker),compatible_models!inner(model)')
+            .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name),part_numbers(id,number,type,maker),compatible_models!inner(model)')
             .ilike('compatible_models.model', `%${q}%`)
             .limit(50)
           : Promise.resolve({ data: [] }),
@@ -298,7 +324,21 @@ export function createApi(): Express {
       for (const p of (mfrMatchProds ?? []) as any[]) { if (!seen.has(p.id)) { seen.add(p.id); list.push(p) } }
       for (const p of (modelMatches ?? []) as any[]) { if (!seen.has(p.id)) { seen.add(p.id); list.push({ ...p, matched_model: q }) } }
       void Promise.resolve(db.from('search_logs').insert({ query: q, result_count: list.length, mode: 'app' })).catch(() => {})
-      return res.json({ query: q, count: list.length, products: list })
+      return res.json({ query: q, count: list.length, products: await toCards(list) })
+    }
+
+    // OEM / cross-reference part number → show only the product(s) that own it.
+    const exactNorm = normalize(q)
+    if (exactNorm.length >= 4) {
+      const { data: exact } = await db.from('part_numbers').select('product_id,number').ilike('normalized', `%${exactNorm}%`).limit(200)
+      const ids = [...new Set((exact ?? []).map((r: any) => r.product_id))]
+      if (ids.length > 0) {
+        const { data: prods } = await db.from('products').select(CARD_COLS).in('id', ids).order('code')
+        const numOf = new Map((exact ?? []).map((r: any) => [r.product_id, r.number]))
+        const cards = ((prods ?? []) as any[]).map((r) => ({ ...toCard(r), matched_part: numOf.get(r.id) }))
+        void Promise.resolve(db.from('search_logs').insert({ query: q, result_count: cards.length, mode: 'part' })).catch(() => {})
+        return res.json({ query: q, count: cards.length, products: cards })
+      }
     }
 
     // Also search with hyphen inserted (sc1 → SC-1) for codes like SC-1, SC-2
@@ -319,17 +359,17 @@ export function createApi(): Express {
     const [{ data: products, error }, { data: codeMatches }, { data: modelMatches }, { data: mfrMatchProds }] = await Promise.all([
       db.rpc('search_products', rpcArgs),
       q ? db.from('products')
-        .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,part_numbers(id,number,type,maker)')
+        .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name),part_numbers(id,number,type,maker)')
         .or(codeOrSearch)
         .order('code')
         .limit(20) : Promise.resolve({ data: [] }),
       q ? db.from('products')
-        .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,part_numbers(id,number,type,maker),compatible_models!inner(model)')
+        .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name),part_numbers(id,number,type,maker),compatible_models!inner(model)')
         .ilike('compatible_models.model', `%${q}%`)
         .limit(50) : Promise.resolve({ data: [] }),
       searchMfrIds.length > 0
         ? db.from('products')
-            .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,part_numbers(id,number,type,maker)')
+            .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name),part_numbers(id,number,type,maker)')
             .in('manufacturer_id', searchMfrIds)
             .order('code')
             .limit(20)
@@ -366,7 +406,7 @@ export function createApi(): Express {
         const fIds = (fuzzy as any[]).map((f: any) => f.product_id)
         const distMap = new Map((fuzzy as any[]).map((f: any) => [f.product_id, f.similarity]))
         const { data: fp } = await db.from('products')
-          .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,part_numbers(id,number,type,maker)')
+          .select('id,code,name,image,availability,filter_type,outer_diameter,inner_diameter,length_mm,thread,micron,rate,description,categories(name),part_numbers(id,number,type,maker)')
           .in('id', fIds)
         const fuzzyProds = ((fp ?? []) as any[])
         for (const p of fuzzyProds) {
@@ -374,13 +414,15 @@ export function createApi(): Express {
           if (m) p.matched_part = m.number
         }
         fuzzyProds.sort((a: any, b: any) => (distMap.get(b.id) ?? 0) - (distMap.get(a.id) ?? 0))
-        return res.json({ query: q, count: fuzzyProds.length, products: fuzzyProds, fuzzy: true })
+        return res.json({ query: q, count: fuzzyProds.length, products: await toCards(fuzzyProds), fuzzy: true })
       }
     }
 
     // Fire-and-forget search log (silently ignored if table missing)
     void Promise.resolve(db.from('search_logs').insert({ query: q, result_count: list.length, mode: 'part' })).catch(() => {})
-    res.json({ query: q, count: list.length, products: list })
+    res.json({ query: q, count: list.length, products: (await toCards(list)).map((c) => (
+      q && !c.matched_part && normalize(c.name).includes(normalize(q)) && normalize(q).length >= 4 ? { ...c, matched_part: q } : c
+    )) })
   })
 
   // ── size search ─────────────────────────────────────────────────────────────

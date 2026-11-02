@@ -67,7 +67,7 @@ export function Header() {
 
         {/* Right: search + user */}
         <div className="flex items-center gap-1">
-          <button onClick={() => navigate('/search')} className={iconBtn} aria-label="Search">
+          <button onClick={() => window.dispatchEvent(new Event('open-search'))} className={iconBtn} aria-label="Search">
             <Search className="h-4 w-4" />
           </button>
           {user?.role === 'admin' && (
@@ -79,17 +79,21 @@ export function Header() {
               Admin
             </Link>
           )}
-          {/* User chip */}
-          <div className="ml-1 hidden sm:flex items-center gap-2 rounded-md border border-white/20 px-2.5 py-1.5">
-            <UserCircle className="h-4 w-4 text-white/70" />
-            <span className="text-xs font-medium text-white/80">{user?.full_name || user?.username}</span>
-            <span className={`text-[10px] rounded px-1 py-0.5 font-semibold ${user?.role === 'admin' ? 'bg-accent/80 text-white' : 'bg-white/15 text-white/70'}`}>
-              {user?.role}
-            </span>
-          </div>
-          <button onClick={handleLogout} className={iconBtn} aria-label="Logout" title="Sign out">
-            <LogOut className="h-4 w-4" />
-          </button>
+          {user ? (
+            <>
+              {/* User chip */}
+              <div className="ml-1 hidden sm:flex items-center gap-2 rounded-md border border-white/20 px-2.5 py-1.5">
+                <UserCircle className="h-4 w-4 text-white/70" />
+                <span className="text-xs font-medium text-white/80">{user.full_name || user.username}</span>
+                <span className={`text-[10px] rounded px-1 py-0.5 font-semibold ${user.role === 'admin' ? 'bg-accent/80 text-white' : 'bg-white/15 text-white/70'}`}>
+                  {user.role}
+                </span>
+              </div>
+              <button onClick={handleLogout} className={iconBtn} aria-label="Logout" title="Sign out">
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          ) : null}
         </div>
       </Container>
 

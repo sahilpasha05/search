@@ -355,11 +355,11 @@ function SizeSearchForm({ category }: { category: string }) {
         <CapRow label="Bottom Cap" options={BOT_CAP_OPTIONS} svg={<SvgThread />} state={bot_cap} onChange={setBotCap} />
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
+      <div className="sticky bottom-20 z-30 mt-6 flex items-center gap-3 rounded-xl border border-line bg-white/95 p-3 shadow-pop backdrop-blur">
         <button
           onClick={doSearch}
           disabled={!hasAny || loading}
-          className="rounded-lg bg-accent px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-accent-dark disabled:opacity-40"
+          className="flex-1 rounded-lg bg-accent px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-accent-dark disabled:opacity-40 sm:flex-none"
         >
           {loading ? 'Searching…' : 'Search'}
         </button>
@@ -379,7 +379,7 @@ function SizeSearchForm({ category }: { category: string }) {
             </p>
           </div>
           {result.products.length > 0 ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
               {result.products.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           ) : (

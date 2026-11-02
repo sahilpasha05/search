@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useMeta, type Category } from '../lib/api'
 import { Container, Spinner } from '../components/ui'
+import { CategoryGrid } from '../components/HomeSearch'
 
 export function CategoryCard({ category: c }: { category: Category }) {
   return (
@@ -44,8 +45,8 @@ export function Categories() {
       {!meta ? (
         <Spinner />
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 animate-fade-in">
-          {meta.categories.map((c) => <CategoryCard key={c.id} category={c} />)}
+        <div className="mt-6 animate-fade-in">
+          <CategoryGrid showTitle={false} />
         </div>
       )}
     </Container>

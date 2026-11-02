@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
 import { Header } from './components/Header'
-import { Login } from './pages/Login'
+import { BottomNav } from './components/BottomNav'
 import { Home } from './pages/Home'
 import { SearchPage } from './pages/SearchPage'
 import { Products } from './pages/Products'
@@ -20,7 +20,7 @@ function ScrollToTop() {
 }
 
 function AppShell() {
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
 
   if (loading) {
     return (
@@ -30,14 +30,12 @@ function AppShell() {
     )
   }
 
-  if (!user) return <Login />
-
   return (
     <>
       <ScrollToTop />
       <div className="flex min-h-screen flex-col bg-surface">
         <Header />
-        <main className="flex-1">
+        <main className="flex-1 pb-28">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<SearchPage />} />
@@ -50,6 +48,7 @@ function AppShell() {
             <Route path="*" element={<SearchPage />} />
           </Routes>
         </main>
+        <BottomNav />
         <footer className="border-t border-line bg-white py-3 text-center text-xs text-ink-soft">
           FilterCore Internal Catalog — Shree Sukhram Industries
         </footer>

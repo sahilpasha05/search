@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { getJSON, type Product } from '../lib/api'
-import { HomeSearch, CategoryGrid } from '../components/HomeSearch'
+import { CategoryGrid } from '../components/HomeSearch'
 import { ProductCard } from '../components/ProductCard'
 import { FiltersPanel, emptyFilters, type ListFilters } from '../components/FiltersPanel'
 import { Container, EmptyState, Spinner } from '../components/ui'
@@ -77,13 +77,10 @@ export function Home() {
   return (
     <Container className="py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Search in our catalog</h1>
-        <p className="mt-1.5 text-sm text-ink-soft">
-          Search by part number, OEM cross-reference, dimensions, or browse by category.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Categories</h1>
+        <p className="mt-1.5 text-sm text-ink-soft">Tap the search button below to search by OEM part no., size or category.</p>
       </div>
 
-      <HomeSearch />
 
       {hasQuery && (
         <div className="mt-10">
@@ -139,7 +136,7 @@ export function Home() {
                         Filters &amp; Products
                       </p>
                     )}
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
                       {result.products.map((p) => <ProductCard key={p.id} product={p} />)}
                     </div>
                   </div>

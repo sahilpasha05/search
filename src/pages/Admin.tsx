@@ -9,6 +9,7 @@ import { getJSON, sendJSON, refreshMeta, useMeta, useDebounced, type Product, ty
 import { Container, PartTypeBadge, Spinner, btnPrimary, btnGhost, inputCls, labelCls } from '../components/ui'
 import { GasketsAdmin } from './GasketsAdmin'
 import { useAuth } from '../lib/auth'
+import { Login } from './Login'
 
 type Tab = 'overview' | 'products' | 'gaskets' | 'categories' | 'manufacturers' | 'quotes' | 'import' | 'users' | 'stock' | 'analytics'
 
@@ -28,7 +29,8 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 export function Admin() {
   const [tab, setTab] = useState<Tab>('overview')
   const { user } = useAuth()
-  if (user?.role !== 'admin') {
+  if (!user) return <Login />
+  if (user.role !== 'admin') {
     return (
       <Container className="py-24 text-center">
         <ShieldCheck className="mx-auto h-12 w-12 text-ink-soft/40" />

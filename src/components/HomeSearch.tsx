@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Hash, Package, Ruler, Search } from 'lucide-react'
+import { Hash, Package, Search } from 'lucide-react'
 import { getJSON, useDebounced, useMeta, type Suggestion } from '../lib/api'
-import { PartTypeBadge, labelCls } from './ui'
+import { PartTypeBadge } from './ui'
 // Suggestion is used by CrossRefInput below
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -11,30 +11,56 @@ const rowInput =
 const orangeBtn =
   'flex w-12 shrink-0 items-center justify-center rounded-r-lg bg-accent text-white transition-colors hover:bg-accent-dark focus:outline-none'
 
-// ─── Main 3-column search ─────────────────────────────────────────────────────
+// ─── Main search: one big box, pick how to search ────────────────────────────
+type Mode = 'oem' | 'machine' | 'size' | 'category'
+const MODES: { id: Mode; label: string }[] = [
+  { id: 'oem', label: 'OEM Part No.' },
+  { id: 'machine', label: 'Machine' },
+  { id: 'size', label: 'Size' },
+  { id: 'category', label: 'Category' },
+]
+
 export function HomeSearch() {
+  const [mode, setMode] = useState<Mode>('oem')
   return (
-    <div className="w-full rounded-2xl border border-line bg-white shadow-card">
-      <div className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-
-        {/* Column 1: Application — filter/product name */}
-        <div className="px-5 py-4">
-          <p className={`${labelCls} mb-2`}>Application</p>
-          <ApplicationInput />
-        </div>
-
-        {/* Column 2: Cross Reference — SC catalog codes & OEM part numbers */}
-        <div className="px-5 py-4">
-          <p className={`${labelCls} mb-2`}>Cross Reference</p>
-          <CrossRefInput />
-        </div>
+    <div className="w-full rounded-2xl border border-line bg-white p-4 shadow-card sm:p-5">
+      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-surface p-1">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            className={`rounded-lg px-1 py-2.5 text-xs font-semibold transition-colors sm:text-sm ${
+              mode === m.id ? 'bg-primary text-white shadow-sm' : 'text-ink-soft hover:text-ink'
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
       </div>
-
-      {/* Dimensions search row */}
-      <div className="border-t border-line px-5 py-4">
-        <DimensionsRow />
+      <div className="mt-4">
+        {mode === 'oem' && <CrossRefInput />}
+        {mode === 'machine' && <ApplicationInput />}
+        {mode === 'size' && <DimensionsRow />}
+        {mode === 'category' && <CategoryPicker />}
       </div>
     </div>
+  )
+}
+
+function CategoryPicker() {
+  const meta = useMeta()
+  const navigate = useNavigate()
+  return (
+    <select
+      defaultValue=""
+      onChange={(e) => e.target.value && navigate(`/products?category=${e.target.value}`)}
+      className="w-full rounded-lg border border-line bg-white px-4 py-3.5 text-sm text-ink focus:border-primary focus:outline-none"
+    >
+      <option value="">Select a category…</option>
+      {(meta?.categories ?? []).map((c) => (
+        <option key={c.id} value={c.slug}>{c.name}</option>
+      ))}
+    </select>
   )
 }
 
@@ -52,24 +78,20 @@ function DimensionsRow() {
 
   return (
     <form onSubmit={go} className="flex items-center gap-3">
-      <div className="flex items-center gap-2 shrink-0">
-        <Ruler className="h-4 w-4 text-primary" />
-        <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">Dimensions</span>
-      </div>
-      <div className="flex flex-1 items-center gap-2">
+      <div className="flex w-full items-center gap-2">
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-white px-4 py-3.5 text-sm text-ink focus:border-primary focus:outline-none"
         >
-          <option value="">Please select a product group</option>
+          <option value="">Select product group, then search by size…</option>
           {(meta?.categories ?? []).map((c) => (
             <option key={c.id} value={c.slug}>{c.name}</option>
           ))}
         </select>
         <button
           type="submit"
-          className="flex w-10 h-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 focus:outline-none"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 focus:outline-none"
           aria-label="Search by dimensions"
         >
           <Search className="h-4 w-4" />
@@ -80,7 +102,7 @@ function DimensionsRow() {
 }
 
 // ─── Application: machine model search ───────────────────────────────────────
-function ApplicationInput() {
+export function ApplicationInput() {
   const [q, setQ] = useState('')
   const [models, setModels] = useState<{ model: string; manufacturer: string }[]>([])
   const [open, setOpen] = useState(false)
@@ -110,6 +132,7 @@ function ApplicationInput() {
       <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) go(q.trim()) }} className="flex">
         <input
           className={rowInput}
+          autoFocus
           placeholder="Machine model, brand, or name…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -145,7 +168,7 @@ function ApplicationInput() {
 }
 
 // ─── Cross Reference: SC codes + OEM part numbers ────────────────────────────
-function CrossRefInput() {
+export function CrossRefInput() {
   const [q, setQ] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [products, setProducts] = useState<{ id: number; name: string; code: string }[]>([])
@@ -164,7 +187,8 @@ function CrossRefInput() {
         const hasProducts = (r.products?.length ?? 0) > 0
         if (hasSuggestions || hasProducts) {
           setSuggestions(r.suggestions)
-          setProducts(r.products ?? [])
+          // OEM number typed → list only matching part numbers, not other products
+          setProducts(hasSuggestions ? [] : (r.products ?? []))
           setOpen(true)
         }
         // if empty, keep previous results visible so dropdown doesn't flicker away
@@ -185,6 +209,7 @@ function CrossRefInput() {
       <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) go(q.trim()) }} className="flex">
         <input
           className={rowInput}
+          autoFocus
           placeholder="SC code or OEM part number…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -281,11 +306,11 @@ function GasketSearchInput() {
 }
 
 // ─── Category image grid ──────────────────────────────────────────────────────
-export function CategoryGrid() {
+export function CategoryGrid({ showTitle = true }: { showTitle?: boolean }) {
   const meta = useMeta()
   return (
     <section>
-      <h2 className="mb-5 text-xl font-bold text-ink">Product categories</h2>
+      {showTitle && <h2 className="mb-5 text-xl font-bold text-ink">Product categories</h2>}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <Link
           to="/gaskets"

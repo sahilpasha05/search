@@ -10,7 +10,8 @@ export function Spinner({ label = 'Loading…' }: { label?: string }) {
 }
 
 export function AvailabilityBadge({ value }: { value: string }) {
-  const inStock = value === 'In Stock'
+  const inStock = value.toLowerCase().replace(/[^a-z]/g, '') === 'instock'
+  const label = inStock ? 'In Stock' : value === 'available' || !value ? 'Available' : value
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -18,7 +19,7 @@ export function AvailabilityBadge({ value }: { value: string }) {
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${inStock ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-      {value}
+      {label}
     </span>
   )
 }
